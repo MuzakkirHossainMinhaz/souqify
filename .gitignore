@@ -43,3 +43,7 @@ Thumbs.db
 .nx/workspace-data
 
 test-output
+
+/generated/prisma
+
+/generated/prisma

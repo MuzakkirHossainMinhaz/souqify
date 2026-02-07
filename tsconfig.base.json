@@ -16,6 +16,11 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@souqify/source"]
+    "customConditions": ["@souqify/source"],
+    "baseUrl": ".",
+    "paths": {
+      "@souqify/errorHandler/*": ["packages/errorHandler/*"],
+      "@souqify/prisma": ["libs/prisma"]
+    }
   }
 }
