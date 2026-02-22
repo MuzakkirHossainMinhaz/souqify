@@ -1,9 +1,12 @@
 generator client {
   provider = "prisma-client"
+  output   = "../generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "mongodb"
+  url      = env("DATABASE_URL")
 }
 
 model Image {

@@ -12,7 +12,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       throw BadRequestError.validationError('User already exists');
     }
 
-    await checkOTPRestrictions(email, next);
+    await checkOTPRestrictions(email);
     const isAllowed = await trackOTPRequest(email);
     if (!isAllowed) {
       throw new TooManyRequestsError('Too many OTP requests. Please try again after 1 hour.');

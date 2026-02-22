@@ -1,7 +1,17 @@
-import { TooManyRequestsError } from '@souqify/errorHandler/index';
+import { AppError, ServiceUnavailableError, TooManyRequestsError } from '@souqify/errorHandler/index';
 import { redis } from '@souqify/redis';
-import { NextFunction } from 'express';
 import { sendEmail } from './email';
+
+const REDIS_UNAVAILABLE = 'Cache temporarily unavailable. Please try again shortly.';
+
+async function guardRedis<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new ServiceUnavailableError(REDIS_UNAVAILABLE);
+  }
+}
 
 const OTP_TTL_SEC = 60 * 5; // OTP valid 5 minutes
 const COOLOFF_SEC = 60 * 1; // 1 minute between send attempts (anti-spam)
@@ -12,8 +22,8 @@ const LOCK_DURATION_SEC = 60 * 60; // lock for 1 hour when limit exceeded
 // generate a 6 digit OTP
 export const generateOTP = async (email: string) => {
   const otp = Math.floor(100000 + Math.random() * 900000);
-  await redis.set(`otp:${email}`, otp.toString(), OTP_TTL_SEC);
-  await redis.set(`otp:cooloff:${email}`, 'true', COOLOFF_SEC);
+  await guardRedis(() => redis.set(`otp:${email}`, otp.toString(), OTP_TTL_SEC));
+  await guardRedis(() => redis.set(`otp:cooloff:${email}`, 'true', COOLOFF_SEC));
   return otp;
 };
 
@@ -33,39 +43,37 @@ export const sendOTP = async (email: string, template: string, data: Record<stri
   });
 };
 
-// Check if email is allowed to request OTP (lock = punishment, cooloff = rate limit between sends)
-export const checkOTPRestrictions = async (email: string, next: NextFunction) => {
-  const locked = await redis.get(`otp:locked:${email}`);
+// Check if email is allowed to request OTP (lock = punishment, cooloff = rate limit between sends). Throws on restriction or Redis error.
+export const checkOTPRestrictions = async (email: string): Promise<void> => {
+  const locked = await guardRedis(() => redis.get(`otp:locked:${email}`));
   if (locked) {
-    return next(new TooManyRequestsError('Too many OTP requests. You are temporarily locked. Try again in 1 hour.'));
+    throw new TooManyRequestsError('Too many OTP requests. You are temporarily locked. Try again in 1 hour.');
   }
 
-  const cooloff = await redis.get(`otp:cooloff:${email}`);
+  const cooloff = await guardRedis(() => redis.get(`otp:cooloff:${email}`));
   if (cooloff) {
-    return next(new TooManyRequestsError('Please wait 1 minute before requesting another OTP.'));
+    throw new TooManyRequestsError('Please wait 1 minute before requesting another OTP.');
   }
-
-  return next();
 };
 
-// Track OTP send attempts in a fixed window. If over limit, set lock and return false.
+// Track OTP send attempts in a fixed window. If over limit, set lock and return false. Throws on Redis error.
 export const trackOTPRequest = async (email: string): Promise<boolean> => {
   const lockKey = `otp:locked:${email}`;
-  if (await redis.get(lockKey)) {
+  if (await guardRedis(() => redis.get(lockKey))) {
     return false;
   }
 
   const key = `otp:requests:${email}`;
-  const raw = await redis.get(key);
+  const raw = await guardRedis(() => redis.get(key));
   const count = raw ? parseInt(raw, 10) : 0;
 
   if (count >= MAX_REQUESTS_PER_WINDOW) {
-    await redis.set(lockKey, '1', LOCK_DURATION_SEC);
+    await guardRedis(() => redis.set(lockKey, '1', LOCK_DURATION_SEC));
     return false;
   }
 
-  const ttl = await redis.client.ttl(key);
+  const ttl = await guardRedis(() => redis.client.ttl(key));
   const windowSec = ttl > 0 ? ttl : REQUEST_WINDOW_SEC;
-  await redis.set(key, String(count + 1), windowSec);
+  await guardRedis(() => redis.set(key, String(count + 1), windowSec));
   return true;
 };
