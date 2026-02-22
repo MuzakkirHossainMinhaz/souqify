@@ -20,7 +20,9 @@
     "baseUrl": ".",
     "paths": {
       "@souqify/errorHandler/*": ["packages/errorHandler/*"],
-      "@souqify/prisma": ["libs/prisma"]
+      "@souqify/validationHandler/*": ["packages/validationHandler/*"],
+      "@souqify/prisma": ["libs/prisma"],
+      "@souqify/redis": ["libs/redis"]
     }
   }
 }

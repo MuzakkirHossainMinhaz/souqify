@@ -24,9 +24,9 @@ app.use(cors({
 
 // rate limit config
 app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: (req: Request) => {
-    return req.headers.authorization ? 100 : 10;
+    return req.headers.authorization ? 100 : 100;
   },
   message: {
     status: 429,

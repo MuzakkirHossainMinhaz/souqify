@@ -1,7 +1,8 @@
-import { errorMiddleware } from '@souqify/errorHandler/errorMiddleware';
+import { errorMiddleware } from '@souqify/errorHandler/errorMiddleware.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
+import authRoutes from './routes/auth.routes.js';
 
 const app = express();
 
@@ -11,13 +12,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // cors config
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || '*',
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  }),
+);
 
-app.get('/', (_req, res) => {
+// routes
+app.use('/', authRoutes);
+
+app.get('/welcome', (_req, res) => {
   res.send({ message: 'Welcome to auth-service!' });
 });
 

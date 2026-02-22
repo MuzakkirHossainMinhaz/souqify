@@ -6,7 +6,7 @@
     "rootDir": "../../",
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
   },
-  "include": ["../../packages/**/*.ts", "src/**/*.ts"],
+  "include": ["../../packages/**/*.ts", "../../libs/**/*.ts", "../../generated/**/*.ts", "src/**/*.ts"],
   "exclude": [
     "out-tsc",
     "dist",
