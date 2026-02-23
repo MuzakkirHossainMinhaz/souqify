@@ -1,4 +1,4 @@
-import { AppError, ServiceUnavailableError, TooManyRequestsError } from '@souqify/errorHandler/index';
+import { AppError, BadRequestError, ServiceUnavailableError, TooManyRequestsError } from '@souqify/errorHandler/index';
 import { redis } from '@souqify/redis';
 import { sendEmail } from './email';
 
@@ -43,6 +43,18 @@ export const sendOTP = async (email: string, template: string, data: Record<stri
   });
 };
 
+// verify OTP
+export const verifyOTP = async (email: string, otp: string) => {
+  const storedOTP = await guardRedis(() => redis.get(`otp:${email}`));
+  if (storedOTP !== otp) {
+    throw new BadRequestError('Invalid OTP');
+  }
+  await guardRedis(() =>
+    redis.delMultiple([`otp:${email}`, `otp:cooloff:${email}`, `otp:locked:${email}`, `otp:requests:${email}`]),
+  );
+  return true;
+};
+
 // Check if email is allowed to request OTP (lock = punishment, cooloff = rate limit between sends). Throws on restriction or Redis error.
 export const checkOTPRestrictions = async (email: string): Promise<void> => {
   const locked = await guardRedis(() => redis.get(`otp:locked:${email}`));
@@ -68,7 +80,7 @@ export const trackOTPRequest = async (email: string): Promise<boolean> => {
   const count = raw ? parseInt(raw, 10) : 0;
 
   if (count >= MAX_REQUESTS_PER_WINDOW) {
-    await guardRedis(() => redis.set(lockKey, '1', LOCK_DURATION_SEC));
+    await guardRedis(() => redis.set(lockKey, 'true', LOCK_DURATION_SEC));
     return false;
   }
 

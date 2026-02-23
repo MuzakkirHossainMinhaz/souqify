@@ -1,10 +1,7 @@
 import 'dotenv/config';
 import Redis from 'ioredis';
 
-const client = new Redis({
-  host: process.env.REDIS_HOST ?? '127.0.0.1',
-  port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
-  password: process.env.REDIS_PASSWORD || undefined,
+const client = new Redis(process.env.REDIS_URL as string, {
   maxRetriesPerRequest: 3,
   retryStrategy(times) {
     if (times > 3) return null; // stop after 3 retries
@@ -27,5 +24,11 @@ export const redis = {
   },
   set: async (key: string, value: string, ex: number) => {
     return await client.set(key, value, 'EX', ex);
+  },
+  del: async (key: string) => {
+    await client.del(key);
+  },
+  delMultiple: async (keys: string[]) => {
+    await client.del(keys);
   },
 };

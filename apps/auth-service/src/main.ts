@@ -1,8 +1,8 @@
-import { errorMiddleware } from '@souqify/errorHandler/errorMiddleware.js';
+import { errorMiddleware } from '@souqify/errorHandler/errorMiddleware';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
-import authRoutes from './routes/auth.routes.js';
+import authRoutes from './routes/auth.routes';
 
 const app = express();
 
